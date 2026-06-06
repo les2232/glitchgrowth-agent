@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+outputs/*.md
+outputs/*.csv
+outputs/*.json
+.streamlit/
+.pytest_cache/
