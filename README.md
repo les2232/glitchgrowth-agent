@@ -49,6 +49,19 @@ Includes:
 - weekly content calendar
 - basic analytics tracker
 
+## Offer Lab / manual launch workflow
+
+Use Offer Lab to define what you are selling before you make launch content:
+
+1. Define the offer, audience, pain point, promise, deliverables, format, price, and CTA keyword.
+2. Generate a launch pack with launch posts, story slides, comment CTAs, DM reply templates, FAQ, objections, and a first-week manual posting plan.
+3. Optionally save the launch posts to the Content Library.
+4. Add saved posts to the Posting Queue when they are ready.
+5. Post manually from your own social accounts.
+6. Track comments, DMs, saves, profile visits, link clicks, and sales manually.
+
+Offer Lab stores offers locally in `data/offers.json`. It does not connect to checkout tools, scrape social platforms, post content, or automate engagement.
+
 ## Safe operating rules
 
 - Human approves all posts and DMs.

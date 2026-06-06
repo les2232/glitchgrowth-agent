@@ -20,6 +20,16 @@ from content_engine import (
 from export_utils import save_packet, save_weekly_batch
 from lead_engine import classify_messages
 from library_engine import load_library, save_to_library, search_library, update_library_item
+from offer_lab_engine import (
+    OFFER_FORMATS,
+    OFFER_STATUSES,
+    archive_offer,
+    generate_launch_pack,
+    load_offers,
+    save_offer,
+    search_offers,
+    update_offer,
+)
 from quality_engine import score_content
 from queue_engine import (
     QUEUE_STATUSES,
@@ -69,6 +79,7 @@ tabs = st.tabs([
     "Quality Review",
     "Posting Queue",
     "Agent Mode",
+    "Offer Lab",
 ])
 
 def _format_copy_block(value):
@@ -258,6 +269,77 @@ def render_agent_schedule_csv(summary):
         writer.writerow({field: item.get(field, "") for field in fieldnames})
     return output.getvalue()
 
+def offer_name_input(label, default, key):
+    offers = load_offers()
+    if not offers:
+        return st.text_input(label, default, key=f"{key}-custom")
+
+    offer_names = [offer["name"] for offer in offers]
+    options = offer_names + ["Custom / free text"]
+    selected = st.selectbox(label, options, key=f"{key}-select")
+    if selected == "Custom / free text":
+        return st.text_input("Custom offer / CTA target", default, key=f"{key}-custom")
+    return selected
+
+def render_launch_pack_markdown(pack):
+    lines = [
+        f"# Launch Pack: {pack['offer_name']}",
+        "",
+        "## Positioning",
+        pack["offer_positioning_summary"],
+        "",
+        "## Audience Pain",
+        pack["audience_pain_summary"],
+        "",
+    ]
+    for key, title in [
+        ("launch_post", "Launch Post"),
+        ("soft_sell_post", "Soft-Sell Post"),
+        ("urgency_final_call_post", "Urgency / Final-Call Post"),
+    ]:
+        post = pack[key]
+        lines.extend([
+            f"## {title}",
+            "",
+            f"**Text overlay:** {post.get('text_overlay', '')}",
+            "",
+            f"**Caption:**\n\n{post.get('caption', '')}",
+            "",
+            f"**CTA:** {post.get('cta', '')}",
+            "",
+        ])
+    lines.extend(["## Story Slides", ""])
+    for slide in pack["story_slides"]:
+        lines.append(f"- Slide {slide['slide']} ({slide['type']}): {slide['copy']}")
+    lines.extend(["", "## Comment CTAs", ""])
+    for cta in pack["comment_ctas"]:
+        lines.append(f"- {cta}")
+    lines.extend(["", "## DM Reply Templates", ""])
+    for reply in pack["dm_reply_templates"]:
+        lines.append(f"- {reply}")
+    lines.extend(["", "## Short FAQ", ""])
+    for item in pack["short_faq"]:
+        lines.append(f"- **{item['question']}** {item['answer']}")
+    lines.extend(["", "## Objections + Replies", ""])
+    for item in pack["common_objections_replies"]:
+        lines.append(f"- **{item['objection']}** {item['reply']}")
+    lines.extend(["", "## First-Week Posting Plan", ""])
+    for item in pack["recommended_first_week_posting_plan"]:
+        lines.append(f"- {item['day']}: {item['post']} - {item['goal']}")
+    return "\n".join(lines)
+
+def launch_post_to_library_packet(post, offer_name):
+    return {
+        "type": post.get("type", "offer_launch_post"),
+        "title": post.get("title", offer_name),
+        "text_overlay": post.get("text_overlay", ""),
+        "caption": post.get("caption", ""),
+        "cta": post.get("cta", ""),
+        "hashtags": "#ContentCreator #CreatorTools #AICreator",
+        "monetization_angle": f"Manual launch content for {offer_name}.",
+        "metric_to_track": "comments, DMs, saves, profile visits, link clicks",
+    }
+
 def show_packet(packet, name_hint="content-packet", influenced_by_swipe=False):
     st.subheader("Generated Content")
     for label, value in _packet_sections(packet).items():
@@ -318,7 +400,7 @@ with tabs[1]:
         audience = st.text_input("Audience", "tech creators and IT people")
         mood = st.selectbox("Mood", ["chaotic funny", "dramatic", "soft", "smart", "unhinged"])
         content_goal = st.selectbox("Content goal", ["growth", "engagement", "lead capture", "product sale", "affiliate", "service lead"])
-        offer = st.text_input("Offer / CTA target", "Chaotic Tech Creator Kit")
+        offer = offer_name_input("Offer / CTA target", "Chaotic Tech Creator Kit", "meme-offer")
         use_swipe_examples = st.checkbox("Use swipe file examples", key="meme-use-swipe")
         submitted = st.form_submit_button("Generate Meme Post")
     if submitted:
@@ -334,7 +416,7 @@ with tabs[2]:
         topic = st.text_input("Carousel topic", "How to turn one meme into a tiny product")
         number_of_slides = st.slider("Number of slides", 4, 10, 7)
         goal = st.selectbox("Goal", ["lead capture", "save/share", "product sale", "growth", "engagement"])
-        offer = st.text_input("Offer", "Chaotic Tech Creator Kit")
+        offer = offer_name_input("Offer", "Chaotic Tech Creator Kit", "carousel-offer")
         use_swipe_examples = st.checkbox("Use swipe file examples", key="carousel-use-swipe")
         submitted = st.form_submit_button("Generate Carousel")
     if submitted:
@@ -350,7 +432,7 @@ with tabs[3]:
         topic = st.text_input("Reel topic", "AI gave me a business idea again")
         desired_length = st.text_input("Desired length", "12-18 seconds")
         style = st.text_input("Style", "fast chaotic talking-head")
-        offer = st.text_input("Offer", "Chaotic Creator Prompt Pack")
+        offer = offer_name_input("Offer", "Chaotic Creator Prompt Pack", "reel-offer")
         use_swipe_examples = st.checkbox("Use swipe file examples", key="reel-use-swipe")
         submitted = st.form_submit_button("Generate Reel")
     if submitted:
@@ -364,7 +446,7 @@ with tabs[4]:
     st.header("Create Story Pack")
     with st.form("story_form"):
         topic = st.text_input("Story topic", "posting consistently with AI")
-        offer = st.text_input("Offer", "Chaotic Tech Creator Kit")
+        offer = offer_name_input("Offer", "Chaotic Tech Creator Kit", "story-offer")
         goal = st.selectbox("Goal", ["lead capture", "product sale", "engagement", "growth"])
         use_swipe_examples = st.checkbox("Use swipe file examples", key="story-use-swipe")
         submitted = st.form_submit_button("Generate Story Pack")
@@ -378,7 +460,7 @@ with tabs[4]:
 with tabs[5]:
     st.header("Create Product Promo")
     with st.form("promo_form"):
-        product_name = st.text_input("Product name", "Chaotic Tech Creator Kit")
+        product_name = offer_name_input("Product name", "Chaotic Tech Creator Kit", "promo-offer")
         product_description = st.text_area(
             "Product description",
             "tech meme prompts, caption templates, CTA ideas, carousel structures, and AI workflow prompts",
@@ -399,7 +481,7 @@ with tabs[6]:
     with st.form("weekly_form"):
         week_theme = st.text_input("Week theme", "AI creator chaos")
         posting_frequency = st.text_input("Posting frequency", "2 posts per weekday")
-        offer = st.text_input("Offer to promote", "Chaotic Tech Creator Kit")
+        offer = offer_name_input("Offer to promote", "Chaotic Tech Creator Kit", "weekly-offer")
         use_swipe_examples = st.checkbox("Use swipe file examples", key="weekly-use-swipe")
         submitted = st.form_submit_button("Generate Weekly Batch")
     if submitted:
@@ -772,7 +854,7 @@ with tabs[14]:
     st.header("Agent Mode")
     with st.form("agent_mode_form"):
         agent_week_theme = st.text_input("Week theme", "AI creator chaos")
-        agent_offer = st.text_input("Offer", "Chaotic Tech Creator Kit")
+        agent_offer = offer_name_input("Offer", "Chaotic Tech Creator Kit", "agent-offer")
         agent_posting_frequency = st.text_input("Posting frequency", "2 posts per weekday")
         agent_minimum_score = st.slider("Minimum quality score", 0, 100, 75)
         agent_use_swipe = st.checkbox("Use swipe file examples", key="agent-use-swipe")
@@ -833,3 +915,174 @@ with tabs[14]:
             file_name="queued-schedule.csv",
             mime="text/csv",
         )
+
+with tabs[15]:
+    st.header("Offer Lab")
+
+    with st.form("create_offer_form"):
+        st.subheader("Create Offer")
+        offer_col1, offer_col2 = st.columns(2)
+        with offer_col1:
+            new_offer_name = st.text_input("Name", "Chaotic Tech Creator Kit")
+            new_offer_status = st.selectbox("Status", OFFER_STATUSES, index=0)
+            new_offer_audience = st.text_input("Audience", "tech creators and chaotic online creators")
+            new_offer_pain = st.text_area("Pain point", "posting consistently while feeling scattered", height=90)
+            new_offer_format = st.selectbox("Format", OFFER_FORMATS)
+            new_offer_price = st.text_input("Price", "$9-$19")
+        with offer_col2:
+            new_offer_promise = st.text_area("Promise", "Create faster without sounding painfully corporate.", height=100)
+            new_offer_deliverables = st.text_area(
+                "Deliverables",
+                "meme prompts, caption templates, CTA ideas, carousel structures, and AI workflow prompts",
+                height=120,
+            )
+            new_offer_keyword = st.text_input("CTA keyword", "KIT")
+            new_offer_checkout = st.text_input("Checkout URL optional", "")
+            new_offer_notes = st.text_area("Notes", "", height=90)
+        submitted_offer = st.form_submit_button("Save Offer")
+
+    if submitted_offer:
+        created_offer = save_offer({
+            "name": new_offer_name,
+            "status": new_offer_status,
+            "audience": new_offer_audience,
+            "pain_point": new_offer_pain,
+            "promise": new_offer_promise,
+            "deliverables": new_offer_deliverables,
+            "format": new_offer_format,
+            "price": new_offer_price,
+            "cta_keyword": new_offer_keyword,
+            "checkout_url": new_offer_checkout,
+            "notes": new_offer_notes,
+        })
+        st.success(f"Saved offer: {created_offer['name']}")
+
+    offers = load_offers()
+    st.subheader("Saved Offers")
+    offer_filter_col1, offer_filter_col2, offer_filter_col3 = st.columns([2, 1, 1])
+    with offer_filter_col1:
+        offer_query = st.text_input("Search offers", "")
+    with offer_filter_col2:
+        offer_status_filter = st.selectbox("Offer status", ["All"] + OFFER_STATUSES)
+    with offer_filter_col3:
+        offer_format_filter = st.selectbox("Offer format", ["All"] + OFFER_FORMATS)
+
+    filtered_offers = search_offers(
+        offer_query,
+        status=None if offer_status_filter == "All" else offer_status_filter,
+        format=None if offer_format_filter == "All" else offer_format_filter,
+    )
+
+    if filtered_offers:
+        offer_table_fields = ["name", "status", "format", "price", "cta_keyword", "audience"]
+        st.dataframe(
+            [{field: offer.get(field, "") for field in offer_table_fields} for offer in filtered_offers],
+            use_container_width=True,
+            hide_index=True,
+        )
+        offer_labels = [
+            f"{offer.get('name', 'Untitled')} | {offer.get('status', 'idea')} | {offer.get('format', 'other')}"
+            for offer in filtered_offers
+        ]
+        selected_offer_label = st.selectbox("Inspect offer", offer_labels)
+        selected_offer = filtered_offers[offer_labels.index(selected_offer_label)]
+
+        st.subheader("Selected Offer")
+        detail_col1, detail_col2 = st.columns(2)
+        detail_col1.text_input("ID", selected_offer.get("id", ""), disabled=True)
+        detail_col2.text_input("Created At", selected_offer.get("created_at", ""), disabled=True)
+        detail_col1.text_input("Name", selected_offer.get("name", ""), disabled=True)
+        detail_col2.text_input("CTA Keyword", selected_offer.get("cta_keyword", ""), disabled=True)
+        st.text_area("Audience", selected_offer.get("audience", ""), height=80, disabled=True)
+        st.text_area("Pain Point", selected_offer.get("pain_point", ""), height=90, disabled=True)
+        st.text_area("Promise", selected_offer.get("promise", ""), height=90, disabled=True)
+        st.text_area("Deliverables", selected_offer.get("deliverables", ""), height=110, disabled=True)
+
+        with st.form("update_offer_form"):
+            current_offer_status = selected_offer.get("status", "idea")
+            current_offer_format = selected_offer.get("format", "other")
+            updated_offer_status = st.selectbox(
+                "Update status",
+                OFFER_STATUSES,
+                index=OFFER_STATUSES.index(current_offer_status) if current_offer_status in OFFER_STATUSES else 0,
+            )
+            updated_offer_format = st.selectbox(
+                "Update format",
+                OFFER_FORMATS,
+                index=OFFER_FORMATS.index(current_offer_format) if current_offer_format in OFFER_FORMATS else 0,
+            )
+            updated_offer_price = st.text_input("Price", selected_offer.get("price", ""))
+            updated_checkout_url = st.text_input("Checkout URL optional", selected_offer.get("checkout_url", ""))
+            updated_offer_notes = st.text_area("Notes", selected_offer.get("notes", ""), height=120)
+            submitted_offer_update = st.form_submit_button("Update Offer")
+
+        if submitted_offer_update:
+            update_offer(
+                selected_offer["id"],
+                {
+                    "status": updated_offer_status,
+                    "format": updated_offer_format,
+                    "price": updated_offer_price,
+                    "checkout_url": updated_checkout_url,
+                    "notes": updated_offer_notes,
+                },
+            )
+            st.success("Offer updated.")
+            st.rerun()
+
+        if st.button("Archive Offer", key=f"archive-offer-{selected_offer['id']}"):
+            archive_offer(selected_offer["id"])
+            st.success("Offer archived.")
+            st.rerun()
+
+        st.subheader("Launch Pack")
+        tone_tags_raw = st.text_input("Tone tags optional", "chaotic, useful, soft-sell")
+        if st.button("Generate Launch Pack", key=f"launch-pack-{selected_offer['id']}"):
+            tone_tags = [tag.strip() for tag in tone_tags_raw.split(",") if tag.strip()]
+            launch_pack = generate_launch_pack(selected_offer, tone_tags=tone_tags)
+            st.session_state[f"launch-pack-{selected_offer['id']}"] = launch_pack
+
+        launch_pack = st.session_state.get(f"launch-pack-{selected_offer['id']}")
+        if launch_pack:
+            st.text_area("Offer positioning summary", launch_pack["offer_positioning_summary"], height=90)
+            st.text_area("Audience pain summary", launch_pack["audience_pain_summary"], height=90)
+            for key, label in [
+                ("launch_post", "Launch Post"),
+                ("soft_sell_post", "Soft-Sell Post"),
+                ("urgency_final_call_post", "Urgency / Final-Call Post"),
+            ]:
+                post = launch_pack[key]
+                with st.expander(label, expanded=key == "launch_post"):
+                    st.text_area("Text overlay", post.get("text_overlay", ""), height=70, key=f"{key}-overlay-{selected_offer['id']}")
+                    st.text_area("Caption", post.get("caption", ""), height=180, key=f"{key}-caption-{selected_offer['id']}")
+                    st.text_area("CTA", post.get("cta", ""), height=70, key=f"{key}-cta-{selected_offer['id']}")
+
+            st.write("Story slides")
+            st.dataframe(launch_pack["story_slides"], use_container_width=True, hide_index=True)
+            st.write("Comment CTAs")
+            for cta in launch_pack["comment_ctas"]:
+                st.write(f"- {cta}")
+            st.write("DM reply templates")
+            for reply in launch_pack["dm_reply_templates"]:
+                st.write(f"- {reply}")
+            st.write("Short FAQ")
+            st.dataframe(launch_pack["short_faq"], use_container_width=True, hide_index=True)
+            st.write("Common objections + replies")
+            st.dataframe(launch_pack["common_objections_replies"], use_container_width=True, hide_index=True)
+            st.write("Recommended first-week posting plan")
+            st.dataframe(launch_pack["recommended_first_week_posting_plan"], use_container_width=True, hide_index=True)
+
+            markdown = render_launch_pack_markdown(launch_pack)
+            st.download_button(
+                "Download Launch Pack Markdown",
+                data=markdown,
+                file_name=f"{selected_offer['id']}-launch-pack.md",
+                mime="text/markdown",
+            )
+
+            if st.button("Save launch posts to Content Library", key=f"save-launch-posts-{selected_offer['id']}"):
+                for post_key in ["launch_post", "soft_sell_post", "urgency_final_call_post"]:
+                    save_to_library(launch_post_to_library_packet(launch_pack[post_key], launch_pack["offer_name"]))
+                st.success("Saved launch, soft-sell, and urgency posts to Content Library.")
+    else:
+        st.info("No offers match those filters yet.")

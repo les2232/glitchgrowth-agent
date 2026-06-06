@@ -1,20 +1,47 @@
 [
   {
+    "id": "chaotic-tech-creator-kit",
+    "created_at": "2026-06-05T19:08:18",
     "name": "Chaotic Tech Creator Kit",
+    "status": "idea",
+    "audience": "tech creators and chaotic online creators",
+    "pain_point": "posting consistently while feeling scattered",
+    "promise": "Tech meme prompts, caption templates, CTA ideas, carousel structures, and AI workflow prompts.",
+    "deliverables": "Tech meme prompts, caption templates, CTA ideas, carousel structures, and AI workflow prompts.",
+    "format": "prompt pack",
     "price": "$9-$19",
-    "description": "Tech meme prompts, caption templates, CTA ideas, carousel structures, and AI workflow prompts.",
-    "cta": "comment KIT if you want early access"
+    "cta_keyword": "KIT",
+    "checkout_url": "",
+    "notes": ""
   },
   {
+    "id": "chaotic-creator-prompt-pack",
+    "created_at": "2026-06-05T19:08:18",
     "name": "Chaotic Creator Prompt Pack",
+    "status": "idea",
+    "audience": "tech creators and chaotic online creators",
+    "pain_point": "posting consistently while feeling scattered",
+    "promise": "Prompts that turn messy creator ideas into memes, carousels, Reels, captions, and offers.",
+    "deliverables": "Prompts that turn messy creator ideas into memes, carousels, Reels, captions, and offers.",
+    "format": "prompt pack",
     "price": "$7-$15",
-    "description": "Prompts that turn messy creator ideas into memes, carousels, Reels, captions, and offers.",
-    "cta": "comment PROMPTS if you want the list"
+    "cta_keyword": "PROMPTS",
+    "checkout_url": "",
+    "notes": ""
   },
   {
+    "id": "mini-ai-workflow-audit",
+    "created_at": "2026-06-05T19:08:18",
     "name": "Mini AI Workflow Audit",
+    "status": "idea",
+    "audience": "tech creators and chaotic online creators",
+    "pain_point": "posting consistently while feeling scattered",
+    "promise": "A small service that reviews a creator or small business workflow and suggests automation improvements.",
+    "deliverables": "A small service that reviews a creator or small business workflow and suggests automation improvements.",
+    "format": "audit",
     "price": "$49-$99",
-    "description": "A small service that reviews a creator or small business workflow and suggests automation improvements.",
-    "cta": "DM me AUDIT if your workflow is a mess"
+    "cta_keyword": "AUDIT",
+    "checkout_url": "",
+    "notes": ""
   }
 ]

@@ -19,6 +19,7 @@ from lead_engine import classify_messages
 from analytics_engine import analyze_post_metrics
 from compliance_engine import check_compliance
 from library_engine import ensure_library_exists, load_library
+from offer_lab_engine import ensure_offers_file_exists, generate_launch_pack, load_offers
 from quality_engine import score_content
 from queue_engine import ensure_queue_exists, load_queue
 from swipe_engine import ensure_swipe_file_exists, load_swipe_file
@@ -42,6 +43,11 @@ def main():
     assert isinstance(load_swipe_file(), list)
     assert ensure_queue_exists().exists()
     assert isinstance(load_queue(), list)
+    assert ensure_offers_file_exists().exists()
+    offers = load_offers()
+    assert isinstance(offers, list)
+    if offers:
+        assert generate_launch_pack(offers[0])["launch_post"]
     fake_batch = {
         "posts": [{
             "format": "meme",
